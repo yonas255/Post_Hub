@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Secure DOM Page</title>
+</head>
+<body>
+
+    <h1>Secure DOM Handling</h1>
+
+    <p>This page safely displays content from the URL hash without executing scripts.</p>
+
+    <div id="output" style="padding:10px; border:1px solid #ccc;"></div>
+
+    <script>
+        // Get hash value
+        let value = window.location.hash.substring(1);
+
+        // Safely render the text (no HTML execution)
+        document.getElementById("output").textContent = value;
+    </script>
+
+    <p>Example:</p>
+    <code>#HelloWorld</code>
+
+</body>
+</html>

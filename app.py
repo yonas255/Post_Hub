@@ -133,6 +133,12 @@ def search():
 
     return f"You searched for: {safe_query}"
 
+@app.route("/logout")
+def logout():
+    log_event("logout", "User logged out")
+    session.clear()
+    return redirect("/login")
+
 
 # -----------------------------
 # SECURE DOM PAGE

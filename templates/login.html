@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PostHub - Login (Insecure)</title>
+</head>
+<body>
+    <h1>PostHub - Login (Insecure)</h1>
+
+    {% if error %}
+        <p style="color:red;">{{ error }}</p>
+    {% endif %}
+
+    <form method="POST">
+        <label>Email:</label><br>
+        <input type="text" name="email"><br><br>
+
+        <label>Password:</label><br>
+        <input type="password" name="password"><br><br>
+
+        <button type="submit">Login</button>
+    </form>
+
+    <p>Don't have an account? <a href="{{ url_for('register') }}">Register here</a></p>
+
+    <p><strong>Hint for SQL Injection test:</strong> try using <code>' OR '1'='1</code> in the email field.</p>
+</body>
+</html>

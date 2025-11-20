@@ -23,6 +23,11 @@ def get_db():
     conn.row_factory = sqlite3.Row
     return conn
 
+def log_event(event_type, message):
+    db = get_db()
+    db.execute("INSERT INTO logs (event_type, message) VALUES (?, ?)", (event_type, message))
+    db.commit()
+
 
 # -----------------------------
 # SECURE ROUTES
@@ -69,8 +74,12 @@ def login():
 
         if user and bcrypt.check_password_hash(user["password"], password):
             session["user_id"] = user["id"]
+
+            log_event("login_success", f"User {email} logged in")
+
             return redirect("/posts")
 
+        log_event("login_failed", f"Failed login attempt for {email}")
         return "Invalid credentials", 401
 
     return render_template("login.html")

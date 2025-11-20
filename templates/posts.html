@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PostHub - Posts (Insecure)</title>
+</head>
+<body>
+    <h1>PostHub - All Posts (Insecure)</h1>
+
+    <p>Logged in as: {{ session.username }}</p>
+    <p>
+        <a href="{{ url_for('create_post') }}">Create New Post</a> |
+        <a href="{{ url_for('logout') }}">Logout</a>
+    </p>
+
+    <hr>
+
+    {% if posts %}
+        {% for post in posts %}
+            <div style="border:1px solid #ccc; margin:10px; padding:10px;">
+                <p><strong>Author:</strong> {{ post['username'] }}</p>
+                <p><strong>Created:</strong> {{ post['created_at'] }}</p>
+                <p><strong>Content (INSECURE):</strong></p>
+                <!-- INTENTIONALLY INSECURE: content not escaped (Stored XSS) -->
+                {{ post['content'] | safe }}
+            </div>
+        {% endfor %}
+    {% else %}
+        <p>No posts yet.</p>
+    {% endif %}
+</body>
+</html>

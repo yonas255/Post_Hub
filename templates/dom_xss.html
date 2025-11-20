@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>DOM XSS Test (Insecure)</title>
+</head>
+<body>
+    <h1>DOM-Based XSS (Insecure)</h1>
+
+    <p>Anything after the hash (#) will be inserted into this page:</p>
+
+    <div id="output"></div>
+
+<script>
+    // Extract everything after #
+    let hashValue = window.location.href.split("#")[1] || "";
+
+    // Decode URL-encoded characters
+    hashValue = decodeURIComponent(hashValue);
+
+    // Older decoding (helps bypass extra encoding)
+    hashValue = unescape(hashValue);
+
+    // INSECURE on purpose: insert directly into DOM
+    document.getElementById("output").innerHTML = hashValue;
+</script>
+
+
+    <p>Try visiting:</p>
+    <code>#&lt;img src=x onerror=alert('DOM XSS')&gt;</code>
+</body>
+</html>

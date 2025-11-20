@@ -1,26 +1,25 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>PostHub - Create Post (Insecure)</title>
+    <title>Create Post (Secure)</title>
 </head>
 <body>
-    <h1>Create a New Post (Insecure)</h1>
 
-    {% if error %}
-        <p style="color:red;">{{ error }}</p>
-    {% endif %}
+    <h1>Create a New Post</h1>
 
     <form method="POST">
-        <label>Content:</label><br>
-        <textarea name="content" rows="5" cols="40"></textarea><br><br>
+        {{ csrf_token() }}
 
-        <button type="submit">Publish</button>
+        <label>Title:</label><br>
+        <input type="text" name="title" required><br><br>
+
+        <label>Content:</label><br>
+        <textarea name="content" rows="5" cols="40" required></textarea><br><br>
+
+        <button type="submit">Create Post</button>
     </form>
 
-    <p><a href="{{ url_for('posts') }}">Back to posts</a></p>
+    <p><a href="/posts">Back to Posts</a></p>
 
-    <p><strong>Hint for Stored XSS test:</strong> try posting
-        <code>&lt;script&gt;alert('XSS')&lt;/script&gt;</code>.
-    </p>
 </body>
 </html>

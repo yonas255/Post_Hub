@@ -3,6 +3,7 @@ from flask_bcrypt import Bcrypt
 from flask_wtf.csrf import CSRFProtect
 import sqlite3
 import os
+import time
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("POSTHUB_SECRET_KEY", "super-secret-fallback")  # secure key via environment variable
@@ -154,6 +155,18 @@ def apply_security_headers(response):
 
     return response
 
+@app.before_request
+def session_timeout():
+    session.permanent = True
+    now = int(time.time())
+    expiry_time = session.get("expiry", now)
+
+    if now > expiry_time:
+        session.clear()
+        return redirect("/login")
+
+    # Extend session by 5 minutes
+    session["expiry"] = now + 300
 
 # -----------------------------
 # RUN APP

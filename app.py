@@ -113,6 +113,7 @@ def create():
 
         db = get_db()
         db.execute("INSERT INTO posts (title, content) VALUES (?, ?)", (title, content))
+        log_event("post_created", f"New post created with title: {title}")
         db.commit()
 
         return redirect("/posts")
@@ -127,6 +128,9 @@ def create():
 def search():
     query = request.args.get("q", "")
     safe_query = query.replace("<", "&lt;").replace(">", "&gt;")
+    if "<" in query or ">" in query:
+        log_event("xss_attempt", f"User attempted XSS payload: {query}")
+
     return f"You searched for: {safe_query}"
 
 

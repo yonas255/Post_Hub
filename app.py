@@ -6,6 +6,10 @@ import os
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("POSTHUB_SECRET_KEY", "super-secret-fallback")  # secure key via environment variable
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SECURE"] = False   # remains False for localhost
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+
 
 bcrypt = Bcrypt(app)
 csrf = CSRFProtect(app)

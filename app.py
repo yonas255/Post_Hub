@@ -42,7 +42,7 @@ def register():
 
         db = get_db()
         db.execute("INSERT INTO users (username, email, password) VALUES (?, ?, ?)",
-                   (username, email, password))
+                (username, email, password))
         db.commit()
 
         return redirect("/login")
@@ -122,6 +122,33 @@ def search():
 @app.route("/dom")
 def dom():
     return render_template("dom_secure.html")
+
+
+# -----------------------------
+# SECURITY HEADERS (OWASP Recommended)
+# -----------------------------
+@app.after_request
+def apply_security_headers(response):
+
+    # Prevent MIME-type sniffing
+    response.headers["X-Content-Type-Options"] = "nosniff"
+
+    # Prevent clickjacking
+    response.headers["X-Frame-Options"] = "DENY"
+
+    # Block dangerous cross-site scripts
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+
+    # Content Security Policy (VERY IMPORTANT)
+    response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self'; object-src 'none'"
+
+    # Limit referrer info
+    response.headers["Referrer-Policy"] = "no-referrer"
+
+    # Add HSTS (HTTPS only – will be used on real hosting, safe here)
+    response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains"
+
+    return response
 
 
 # -----------------------------

@@ -1,7 +1,9 @@
 from flask import Flask, render_template, request, redirect, session, make_response
 from flask_bcrypt import Bcrypt
 from flask_wtf.csrf import CSRFProtect
+from flask_wtf.csrf import generate_csrf
 import sqlite3
+from flask import g
 import os
 import time
 
@@ -19,15 +21,30 @@ csrf = CSRFProtect(app)
 # SECURE: Database connection
 # -----------------------------
 def get_db():
-    conn = sqlite3.connect("secure.db")
-    conn.row_factory = sqlite3.Row
-    return conn
+    if "db" not in g:
+        g.db = sqlite3.connect("secure.DB", check_same_thread=False, timeout=10)
+        g.db.row_factory= sqlite3.Row
+    return g.db
+
+    #conn = sqlite3.connect("secure.db", check_same_thread=False, timeout=5)
+    #conn.row_factory = sqlite3.Row
+    #return conn
+@app.teardown_appcontext
+def close_db(exception):
+    db= g.pop("db", None)
+    if db is not None:
+        db.close()
+        
 
 def log_event(event_type, message):
     db = get_db()
     db.execute("INSERT INTO logs (event_type, message) VALUES (?, ?)", (event_type, message))
     db.commit()
+    
 
+@app.context_processor
+def csrf_token_context():
+    return dict(csrf_token=generate_csrf) # type: ignore
 
 # -----------------------------
 # SECURE ROUTES

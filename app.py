@@ -4,10 +4,12 @@ from flask_wtf.csrf import CSRFProtect
 from flask_wtf.csrf import generate_csrf
 import sqlite3
 from flask import g
+from markupsafe import escape
 import os
 import time
 
 app = Flask(__name__)
+app.config["TEMPLATES_AUTO_RELOAD"] = True
 app.secret_key = os.environ.get("POSTHUB_SECRET_KEY", "super-secret-fallback")  # secure key via environment variable
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SECURE"] = False   # remains False for localhost
@@ -22,7 +24,7 @@ csrf = CSRFProtect(app)
 # -----------------------------
 def get_db():
     if "db" not in g:
-        g.db = sqlite3.connect("secure.DB", check_same_thread=False, timeout=10)
+        g.db = sqlite3.connect("secure.db", check_same_thread=False, timeout=10)
         g.db.row_factory= sqlite3.Row
     return g.db
 
@@ -143,12 +145,17 @@ def create():
 # -----------------------------
 @app.route("/search")
 def search():
+    print("TEMPLATE FOLDER:", app.template_folder)
+    print("WORKING DIR", os.getcwd())
+    
     query = request.args.get("q", "")
-    safe_query = query.replace("<", "&lt;").replace(">", "&gt;")
-    if "<" in query or ">" in query:
+    
+    safe_query = str(escape(query))
+    
+    if "<" in query or ">" in query or "script" in query.lower():
         log_event("xss_attempt", f"User attempted XSS payload: {query}")
-
-    return f"You searched for: {safe_query}"
+    
+    return render_template ("search_result.html", query=safe_query)
 
 @app.route("/logout")
 def logout():
@@ -177,11 +184,8 @@ def apply_security_headers(response):
     # Prevent clickjacking
     response.headers["X-Frame-Options"] = "DENY"
 
-    # Block dangerous cross-site scripts
-    response.headers["X-XSS-Protection"] = "1; mode=block"
-
     # Content Security Policy (VERY IMPORTANT)
-    response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self'; object-src 'none'"
+    response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self'; object-src 'none'; style-src 'self'; img-src 'self'; base-uri 'self'; frame-ancestors 'none'; form-action 'self';"
 
     # Limit referrer info
     response.headers["Referrer-Policy"] = "no-referrer"

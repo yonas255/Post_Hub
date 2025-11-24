@@ -169,7 +169,9 @@ def logout():
 # -----------------------------
 @app.route("/dom")
 def dom():
-    return render_template("dom_secure.html")
+    response = make_response(render_template("dom_secure.html"))
+    response.headers["Content-security-policy"] = ("default-src 'self';" "script-src 'self' 'unsafe-inline'; " "object-src 'none'" )
+    return response
 
 
 # -----------------------------
@@ -177,23 +179,31 @@ def dom():
 # -----------------------------
 @app.after_request
 def apply_security_headers(response):
+    path = request.path
+
+    # Default CSP for all pages
+    default_csp = ( "default-src 'self'; " "script-src 'self'; " "object-src 'none'; " "style-src 'self'; " "img-src 'self'; " "base-uri 'self'; " "frame-ancestors 'none'; " "form-action 'self';")
+
+    # Special CSP for /dom (allow inline JS)
+    dom_csp = ( "default-src 'self'; " "script-src 'self' 'unsafe-inline'; " "object-src 'none'; " "style-src 'self'; " "img-src 'self';" )
+
+    # Apply correct CSP depending on route
+    if path == "/dom":
+        response.headers["Content-Security-Policy"] = dom_csp
+    else:
+        response.headers["Content-Security-Policy"] = default_csp
 
     # Prevent MIME-type sniffing
     response.headers["X-Content-Type-Options"] = "nosniff"
-
     # Prevent clickjacking
     response.headers["X-Frame-Options"] = "DENY"
-
-    # Content Security Policy (VERY IMPORTANT)
-    response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self'; object-src 'none'; style-src 'self'; img-src 'self'; base-uri 'self'; frame-ancestors 'none'; form-action 'self';"
-
     # Limit referrer info
     response.headers["Referrer-Policy"] = "no-referrer"
-
     # Add HSTS (HTTPS only – will be used on real hosting, safe here)
     response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains"
-
+    
     return response
+
 
 @app.before_request
 def session_timeout():

@@ -172,6 +172,7 @@ def create_post():
 
 @app.route("/search")
 def search():
+    print("USING INSECURE SEARCH ROUTE")
     query = request.args.get("q", "")
 
     # INSECURE: reflects user input directly (Reflected XSS)

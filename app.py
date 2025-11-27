@@ -8,6 +8,49 @@ from markupsafe import escape
 import os
 import time
 
+
+# -----------------------------
+# DATABASE INITIALISATION (CLEAN + SAFE)
+# -----------------------------
+def init_db():
+    db = sqlite3.connect("secure.db")
+    cursor = db.cursor()
+
+    # Users table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT NOT NULL,
+        email TEXT NOT NULL,
+        password TEXT NOT NULL
+    )
+    """)
+
+    # Posts table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS posts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        content TEXT NOT NULL
+    )
+    """)
+
+    # Logs table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        event_type TEXT NOT NULL,
+        message TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+
+    db.commit()
+    db.close()
+
+
+
+
 app = Flask(__name__)
 app.config["TEMPLATES_AUTO_RELOAD"] = True
 app.secret_key = os.environ.get("POSTHUB_SECRET_KEY", "super-secret-fallback")  # secure key via environment variable
@@ -222,4 +265,6 @@ def session_timeout():
 # RUN APP
 # -----------------------------
 if __name__ == "__main__":
+    print("creating the DataBase(secure.db)...")
+    init_db()
     app.run(debug=False)  # secure mode

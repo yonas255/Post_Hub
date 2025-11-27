@@ -8,7 +8,7 @@
     <h1>Create a New Post</h1>
 
     <form method="POST">
-        {{ csrf_token() }}
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
         <label>Title:</label><br>
         <input type="text" name="title" required><br><br>

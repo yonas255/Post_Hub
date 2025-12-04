@@ -110,12 +110,16 @@ def register():
     if request.method == "POST":
         username = request.form["username"]
         email = request.form["email"]
-        password = bcrypt.generate_password_hash(request.form["password"]).decode("utf-8")
+        hashed_password = bcrypt.generate_password_hash(request.form["password"]).decode("utf-8")
 
         db = get_db()
-        db.execute("INSERT INTO users (username, email, password) VALUES (?, ?, ?)",
-                (username, email, password))
-        db.commit()
+        
+        try:
+            db.execute("INSERT INTO users (username, email, password) VALUES (?, ?, ?)",
+                    (username, email, hashed_password))
+            db.commit()
+        except sqlite3.IntegrityError:
+            return "Email already registered. Please choose another.", 400
 
         return redirect("/login")
 
@@ -130,21 +134,59 @@ def login():
     if request.method == "POST":
         email = request.form["email"]
         password = request.form["password"]
+        now = int(time.time())
 
         db = get_db()
         user = db.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
 
-        if user and bcrypt.check_password_hash(user["password"], password):
+        # User not found
+        if not user:
+            return render_template("login.html", error_message="Invalid credentials.")
+
+        # Check lockout
+        if user["lockout_until"] and now < user["lockout_until"]:
+            remaining = user["lockout_until"] - now
+            return render_template(
+                "login.html",
+                error_message=f"Account locked. Try again in {remaining} seconds."
+            )
+
+        # Password correct
+        if bcrypt.check_password_hash(user["password"], password):
+            db.execute("UPDATE users SET failed_attempts = 0, lockout_until = 0 WHERE id = ?", (user["id"],))
+            db.commit()
             session["user_id"] = user["id"]
-
-            log_event("login_success", f"User {email} logged in")
-
             return redirect("/posts")
 
-        log_event("login_failed", f"Failed login attempt for {email}")
-        return "Invalid credentials", 401
+        # Wrong password
+        new_count = user["failed_attempts"] + 1
+
+        # Lockout after 5 attempts
+        if new_count >= 5:
+            lock_time = now + 180  # 3 minutes
+            db.execute(
+                "UPDATE users SET failed_attempts = ?, lockout_until = ? WHERE id = ?",
+                (new_count, lock_time, user["id"])
+            )
+            db.commit()
+
+            return render_template(
+                "login.html",
+                error_message="Too many attempts. Your account is locked for 3 minutes."
+            )
+
+        # Normal wrong attempt
+        db.execute("UPDATE users SET failed_attempts = ? WHERE id = ?", (new_count, user["id"]))
+        db.commit()
+
+        return render_template(
+            "login.html",
+            error_message=f"Invalid credentials. {new_count}/5 failed attempts."
+        )
 
     return render_template("login.html")
+
+
 
 
 # -----------------------------

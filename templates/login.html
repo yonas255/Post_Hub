@@ -6,6 +6,11 @@
 <body>
 
     <h1>Login</h1>
+    {% if error_message %}
+        <p style="color: red; font-weight: bold;">
+        {{ error_message }}
+        </p>
+    {% endif %}
 
     <form method="POST">
 

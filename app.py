@@ -9,24 +9,27 @@ import os
 import time
 
 
-# -----------------------------
-# DATABASE INITIALISATION (CLEAN + SAFE)
-# -----------------------------
+# DATABASE establishment clean and secure
+#creates secure.db with secure tabel and defaults
+
 def init_db():
     db = sqlite3.connect("secure.db")
     cursor = db.cursor()
 
-    # Users table
+    # Users table with required credentials
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT NOT NULL,
-        email TEXT NOT NULL,
-        password TEXT NOT NULL
-    )
-    """)
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL,
+    email TEXT NOT NULL UNIQUE,
+    password TEXT NOT NULL,
+    failed_attempts INTEGER DEFAULT 0,
+    lockout_until INTEGER DEFAULT 0
+)
+""")
 
-    # Posts table
+
+    #post table for content auto escaping during the output
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS posts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -35,7 +38,7 @@ def init_db():
     )
     """)
 
-    # Logs table
+    #log table for auditing important events
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS logs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -62,38 +65,32 @@ app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 bcrypt = Bcrypt(app)
 csrf = CSRFProtect(app)
 
-# -----------------------------
-# SECURE: Database connection
-# -----------------------------
+# secure db connection wth thread safe
 def get_db():
     if "db" not in g:
         g.db = sqlite3.connect("secure.db", check_same_thread=False, timeout=10)
         g.db.row_factory= sqlite3.Row
     return g.db
 
-    #conn = sqlite3.connect("secure.db", check_same_thread=False, timeout=5)
-    #conn.row_factory = sqlite3.Row
-    #return conn
 @app.teardown_appcontext
 def close_db(exception):
     db= g.pop("db", None)
     if db is not None:
         db.close()
         
-
+# a simple event logger for security auditing
 def log_event(event_type, message):
     db = get_db()
     db.execute("INSERT INTO logs (event_type, message) VALUES (?, ?)", (event_type, message))
     db.commit()
     
-
+# generate CSRF Tokens for all forms
 @app.context_processor
 def csrf_token_context():
     return dict(csrf_token=generate_csrf) # type: ignore
 
-# -----------------------------
-# SECURE ROUTES
-# -----------------------------
+
+#secure routes for home (requires login)
 
 @app.route("/")
 def home():
@@ -102,9 +99,9 @@ def home():
     return redirect("/posts")
 
 
-# -----------------------------
-# SECURE REGISTRATION
-# -----------------------------
+
+# secure route for registration which stores hashed password only
+
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "POST":
@@ -126,9 +123,8 @@ def register():
     return render_template("register.html")
 
 
-# -----------------------------
-# SECURE LOGIN
-# -----------------------------
+# secure route to Login (brute force protection)
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -139,11 +135,11 @@ def login():
         db = get_db()
         user = db.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
 
-        # User not found
+        # user doesn't exit in the database
         if not user:
             return render_template("login.html", error_message="Invalid credentials.")
 
-        # Check lockout
+        # the account will be locked temporarily(3 min) after 5 wrong attemts
         if user["lockout_until"] and now < user["lockout_until"]:
             remaining = user["lockout_until"] - now
             return render_template(
@@ -151,17 +147,17 @@ def login():
                 error_message=f"Account locked. Try again in {remaining} seconds."
             )
 
-        # Password correct
+        # login successfuland it reset the counter
         if bcrypt.check_password_hash(user["password"], password):
             db.execute("UPDATE users SET failed_attempts = 0, lockout_until = 0 WHERE id = ?", (user["id"],))
             db.commit()
             session["user_id"] = user["id"]
             return redirect("/posts")
 
-        # Wrong password
+        # Wrong password ---> increase failed attempt count
         new_count = user["failed_attempts"] + 1
 
-        # Lockout after 5 attempts
+        # 3 min account lock down after 5 incorrect inputs
         if new_count >= 5:
             lock_time = now + 180  # 3 minutes
             db.execute(
@@ -175,7 +171,7 @@ def login():
                 error_message="Too many attempts. Your account is locked for 3 minutes."
             )
 
-        # Normal wrong attempt
+        
         db.execute("UPDATE users SET failed_attempts = ? WHERE id = ?", (new_count, user["id"]))
         db.commit()
 
@@ -189,9 +185,7 @@ def login():
 
 
 
-# -----------------------------
-# SECURE POSTS (AUTO ESCAPED)
-# -----------------------------
+#secure route to post page with jinja autoescaping prevents XSS
 @app.route("/posts")
 def posts():
     if "user_id" not in session:
@@ -203,9 +197,7 @@ def posts():
     return render_template("posts.html", posts=posts)
 
 
-# -----------------------------
-# SECURE CREATE POST
-# -----------------------------
+# Safe route to create page with safe input handling
 @app.route("/create", methods=["GET", "POST"])
 def create():
     if "user_id" not in session:
@@ -225,23 +217,22 @@ def create():
     return render_template("create_post.html")
 
 
-# -----------------------------
-# SECURE SEARCH (Reflected XSS fixed)
-# -----------------------------
+#safe route to search page with reflected xss is fixed
 @app.route("/search")
 def search():
     print("TEMPLATE FOLDER:", app.template_folder)
     print("WORKING DIR", os.getcwd())
     
     query = request.args.get("q", "")
-    
     safe_query = str(escape(query))
     
+    #the log attempted attacks
     if "<" in query or ">" in query or "script" in query.lower():
         log_event("xss_attempt", f"User attempted XSS payload: {query}")
     
     return render_template ("search_result.html", query=safe_query)
 
+#safe route to logout
 @app.route("/logout")
 def logout():
     log_event("logout", "User logged out")
@@ -249,9 +240,7 @@ def logout():
     return redirect("/login")
 
 
-# -----------------------------
-# SECURE DOM PAGE
-# -----------------------------
+#secure route to DOM page with safe CSP
 @app.route("/dom")
 def dom():
     response = make_response(render_template("dom_secure.html"))
@@ -259,17 +248,15 @@ def dom():
     return response
 
 
-# -----------------------------
-# SECURITY HEADERS (OWASP Recommended)
-# -----------------------------
+#safe route to Global security headers with OWASP
 @app.after_request
 def apply_security_headers(response):
     path = request.path
 
-    # Default CSP for all pages
+    # defult csp for each page
     default_csp = ( "default-src 'self'; " "script-src 'self'; " "object-src 'none'; " "style-src 'self'; " "img-src 'self'; " "base-uri 'self'; " "frame-ancestors 'none'; " "form-action 'self';")
 
-    # Special CSP for /dom (allow inline JS)
+    # Special CSP for /dom page
     dom_csp = ( "default-src 'self'; " "script-src 'self' 'unsafe-inline'; " "object-src 'none'; " "style-src 'self'; " "img-src 'self';" )
 
     # Apply correct CSP depending on route
@@ -289,7 +276,7 @@ def apply_security_headers(response):
     
     return response
 
-
+# auto logout (session timeout)
 @app.before_request
 def session_timeout():
     session.permanent = True
@@ -303,9 +290,7 @@ def session_timeout():
     # Extend session by 5 minutes
     session["expiry"] = now + 300
 
-# -----------------------------
 # RUN APP
-# -----------------------------
 if __name__ == "__main__":
     print("creating the DataBase(secure.db)...")
     init_db()

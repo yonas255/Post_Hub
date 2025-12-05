@@ -4,18 +4,26 @@
     <title>Create Post (Secure)</title>
 </head>
 <body>
-
+    <!--this code will allows vertified user to create a new post securely.
+    it includes CSRF safeguard, it require input field, and relies on the 
+    server to safely handle/escape content before storing -->
+    
     <h1>Create a New Post</h1>
+    <!-- the form sends user input using post which is used instade of GET 
+    to avoid exposing use data-->
 
     <form method="POST">
+        <!-- CSRF protection: Flak-WTF will generate a uinique csrf_token For a session-->
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
+        <!-- title field required because it ensures that empty values cannot be submitted-->
         <label>Title:</label><br>
         <input type="text" name="title" required><br><br>
-
+        <!--in contenet field users enter the post body,
+        Jinja2 autoescape this content on output, avoiding stored XSS-->
         <label>Content:</label><br>
         <textarea name="content" rows="5" cols="40" required></textarea><br><br>
-
+        <!--submit button will send a form of data to the server and the server will validated 
+        Logged, sanitized, and safely injected to the database-->
         <button type="submit">Create Post</button>
     </form>
 

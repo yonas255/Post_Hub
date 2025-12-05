@@ -4,9 +4,9 @@
     <title>Posts (Secure)</title>
 </head>
 <body>
-
+    <!--secure post html: all content is autoescape by Jinja2-->
     <h1>All Posts</h1>
-
+    <!-- navigation links-->
     <a href="/create">Create New Post</a>
     <a href="/logout" style="margin-left:20px;">Logout</a>
 
@@ -15,7 +15,8 @@
     {% if posts %}
         {% for post in posts %}
             <h2>{{ post.title }}</h2>
-            <p>{{ post.content }}</p> <!-- auto-escaped -->
+            <!-- Jinja autoescape content prevents stored XSS-->
+            <p>{{ post.content }}</p>
             <hr>
         {% endfor %}
     {% else %}

@@ -5,10 +5,11 @@ serch_secure is for {% autoescape true %}
     <title>Search Result (Secure)</title>
 </head>
 <body>
-
+<!-- secure Search page with autoescape on to avoid reflected XSS-->
 <h1>SEARCH TEMPLATE</h1>
-
+<!-- search term is safly escaped before display-->
 <p>escaped query: {{ query }}</p>
+<!-- example static text-->
 <p>Raw test: Test123</p>
 
 </body>

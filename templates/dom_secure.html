@@ -4,7 +4,7 @@
     <title>Secure DOM Page</title>
 </head>
 <body>
-
+    <!--Secure DOM Handling prevents DOM-based XSS-->
     <h1>Secure DOM Handling</h1>
 
     <p>This page safely displays content from the URL hash without executing scripts.</p>
@@ -12,13 +12,15 @@
     <div id="output" style="padding:10px; border:1px solid #ccc;"></div>
 
     <script>
-        // Get hash value
+        // GET hash value from URL
+        // window.location.hash contains everything after'#'
         let value = window.location.hash.substring(1);
 
-        // Safely render the text (no HTML execution)
+        // safe RENDERING using .textContent
+        //textcountnet prevents HTML, Javascript, or SVG Payload
         document.getElementById("output").textContent = value;
     </script>
-
+    <!--simple example to show how the page behaves safely-->
     <p>Example:</p>
     <code>#HelloWorld</code>
 

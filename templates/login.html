@@ -4,16 +4,17 @@
     <title>Secure Login</title>
 </head>
 <body>
-
+    <!--secure login page adding CSRF safeguard and safe error Handling-->
     <h1>Login</h1>
+    <!--after wrong attempt display safe, escaped error_message-->
     {% if error_message %}
         <p style="color: red; font-weight: bold;">
         {{ error_message }}
         </p>
     {% endif %}
-
+        
     <form method="POST">
-
+        <!--csrf_token avoids Cross-site request forgery-->
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         
 
@@ -22,10 +23,10 @@
 
         <label>Password:</label><br>
         <input type="password" name="password" required><br><br>
-
+        <!--submit button to backend for secure verification-->
         <button type="submit">Login</button>
     </form>
-
+    <!--user Register if they dont have an account-->
     <p>Don't have an account? <a href="/register">Register</a></p>
 
 </body>

@@ -4,12 +4,14 @@
     <title>Secure Registration</title>
 </head>
 <body>
-
+    <!-- secure Registration page using csrf_token safeguard-->
     <h1>Register</h1>
 
     <form method="POST">
+        <!--csrf_token prevents Cross site request forgery-->
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
+        <!--required fields for user account establishment -->
         <label>Username:</label><br>
         <input type="text" name="username" required><br><br>
 
@@ -18,10 +20,10 @@
 
         <label>Password:</label><br>
         <input type="password" name="password" required><br><br>
-
+        <!-- this button creates a new user safely at the backend-->
         <button type="submit">Register</button>
     </form>
-
+    <!--login option if the user have an account-->
     <p>Already have an account? <a href="/login">Login</a></p>
 
 </body>
